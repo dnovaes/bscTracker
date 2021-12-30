@@ -1,0 +1,50 @@
+const Tx = require('ethereumjs-tx').Transaction
+const GWEI = "gwei"
+var web3Client = {}
+
+module.exports = {
+    init: function(client) {
+        web3Client = client
+    },
+    getBalance: function(walletAddress) {
+        web3Client.eth.getBalance(walletAddress)
+            .then(res => console.log(`Balance of ETH: ${this.fromWei(res)}`))
+    },
+    fromWei: function(wei) {
+        return web3Client.utils.fromWei(wei)
+    },
+    toWei: function(amnt, unit = "ether") {
+        return web3Client.utils.toWei(amnt, unit)
+    },
+    getAccounts: function() {
+        return web3Client.eth.getAccounts().then(
+            res => console.log(res)
+        )
+    },
+    getTransactionCount: async function getTransactionCount(walletAddress) {
+        return await web3Client.eth.getTransactionCount(walletAddress)
+    },
+    transfer: async function(fromAddr, fromPrivAddr, toAddr, valueToTransfer) {
+        console.log(`gasPrice: ${this.toWei("20", GWEI)} GWEI`)
+        let nonce = await this.getTransactionCount(fromAddr)
+        var rawTransaction = {
+            "nonce": nonce,
+            "gasPrice": web3Client.utils.toHex(this.toWei("20", GWEI)),
+            "gasLimit": web3Client.utils.toHex("300000"),
+            "from": fromAddr,
+            "to": toAddr,
+            "value": web3Client.utils.toHex(this.toWei(valueToTransfer)),
+        }
+
+        var privateKeyHexBuffer = Buffer.from(fromPrivAddr.replace( '0x' , '' ), 'hex')
+
+        let tx = new Tx(rawTransaction)
+        tx.sign(privateKeyHexBuffer)
+
+        var serializedTx = '0x' + tx.serialize().toString('hex')
+        var txSent = await web3Client.eth.sendSignedTransaction(serializedTx)
+            .catch(error => { console.log(`sendSignedTransaction-> Error: ${error.message}`)})
+        return txSent
+    }
+
+}

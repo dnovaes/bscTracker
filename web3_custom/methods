@@ -1,5 +1,5 @@
 const Tx = require('ethereumjs-tx').Transaction
-const GWEI = "gwei"
+const gwei = "gwei"
 var web3Client = {}
 
 module.exports = {
@@ -25,11 +25,10 @@ module.exports = {
         return await web3Client.eth.getTransactionCount(walletAddress)
     },
     transfer: async function(fromAddr, fromPrivAddr, toAddr, valueToTransfer) {
-        console.log(`gasPrice: ${this.toWei("20", GWEI)} GWEI`)
         let nonce = await this.getTransactionCount(fromAddr)
         var rawTransaction = {
             "nonce": nonce,
-            "gasPrice": web3Client.utils.toHex(this.toWei("20", GWEI)),
+            "gasPrice": web3Client.utils.toHex(this.toWei("20", gwei)),
             "gasLimit": web3Client.utils.toHex("300000"),
             "from": fromAddr,
             "to": toAddr,

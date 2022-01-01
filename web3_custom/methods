@@ -1,19 +1,19 @@
 const Tx = require('ethereumjs-tx').Transaction
-const gwei = "gwei"
+const GWEI = "Gwei"
+const ETHER = "ether"
 var web3Client = {}
 
 module.exports = {
     init: function(client) {
         web3Client = client
     },
-    getBalance: function(walletAddress) {
-        web3Client.eth.getBalance(walletAddress)
-            .then(res => console.log(`Balance of ETH: ${this.fromWei(res)}`))
+    getBalance: async function(walletAddress) {
+        return await web3Client.eth.getBalance(walletAddress)
     },
     fromWei: function(wei) {
         return web3Client.utils.fromWei(wei)
     },
-    toWei: function(amnt, unit = "ether") {
+    toWei: function(amnt, unit = ETHER) {
         return web3Client.utils.toWei(amnt, unit)
     },
     getAccounts: function() {
@@ -24,12 +24,12 @@ module.exports = {
     getTransactionCount: async function getTransactionCount(walletAddress) {
         return await web3Client.eth.getTransactionCount(walletAddress)
     },
-    transfer: async function(fromAddr, fromPrivAddr, toAddr, valueToTransfer) {
+    transfer: async function(fromAddr, fromPrivAddr, toAddr, valueToTransfer, gasPriceGwei) {
         let nonce = await this.getTransactionCount(fromAddr)
         var rawTransaction = {
             "nonce": nonce,
-            "gasPrice": web3Client.utils.toHex(this.toWei("20", gwei)),
-            "gasLimit": web3Client.utils.toHex("300000"),
+            "gasPrice": web3Client.utils.toHex(this.toWei(gasPriceGwei, GWEI)),
+            "gasLimit": web3Client.utils.toHex("300000"), //gwei aswell
             "from": fromAddr,
             "to": toAddr,
             "value": web3Client.utils.toHex(this.toWei(valueToTransfer)),
@@ -44,6 +44,27 @@ module.exports = {
         var txSent = await web3Client.eth.sendSignedTransaction(serializedTx)
             .catch(error => { console.log(`sendSignedTransaction-> Error: ${error.message}`)})
         return txSent
+    },
+    gweiToUSD: function(gasPrice, networkToken = "ETH", unit = GWEI) {
+        //1 wei = 1*10^-18 ETH
+        //1 ether = 1 ETH = 1*10^18 wei
+        let ethUSD = 3709
+        let bnbUSD = 522
+
+        let amnt = 0
+        if (unit == GWEI) {
+            amnt = gasPrice*Math.pow(10, -9)
+        } else if (unit == ETHER) {
+            amnt = gasPrice
+        } else {
+            amnt = gasPrice*Math.pow(10, -18)
+        }
+
+        if (networkToken == "BNB") {
+            return amnt*bnbUSD
+        } else {
+            return amnt*ethUSD
+        }
     }
 
 }

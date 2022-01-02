@@ -10,18 +10,16 @@ module.exports = {
     getBalance: async function(walletAddress) {
         return await web3Client.eth.getBalance(walletAddress)
     },
-    fromWei: function(wei) {
-        return web3Client.utils.fromWei(wei)
+    fromWei: function(wei, unit = ETHER) {
+        return web3Client.utils.fromWei(wei, unit)
     },
     toWei: function(amnt, unit = ETHER) {
         return web3Client.utils.toWei(amnt, unit)
     },
-    getAccounts: function() {
-        return web3Client.eth.getAccounts().then(
-            res => console.log(res)
-        )
+    getAccounts: async function() {
+        return await web3Client.eth.getAccounts()
     },
-    getTransactionCount: async function getTransactionCount(walletAddress) {
+    getTransactionCount: async function (walletAddress) {
         return await web3Client.eth.getTransactionCount(walletAddress)
     },
     transfer: async function(fromAddr, fromPrivAddr, toAddr, valueToTransfer, gasPriceGwei) {
@@ -45,7 +43,7 @@ module.exports = {
             .catch(error => { console.log(`sendSignedTransaction-> Error: ${error.message}`)})
         return txSent
     },
-    gweiToUSD: function(gasPrice, networkToken = "ETH", unit = GWEI) {
+    toUSD: function(gasPrice, networkToken = "ETH", unit = GWEI) {
         //1 wei = 1*10^-18 ETH
         //1 ether = 1 ETH = 1*10^18 wei
         let ethUSD = 3709

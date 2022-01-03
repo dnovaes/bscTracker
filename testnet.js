@@ -1,19 +1,25 @@
-const interval = require('./interval')
+const interval = require('./utils/interval')
 const Web3 = require('web3');
 const Tx = require('ethereumjs-tx').Transaction
-const common = require('ethereumjs-common');
 const bufferToHex = require('ethereumjs-util').bufferToHex
 const privateToAddress = require('ethereumjs-util').privateToAddress
-const e = require('cors');
+const web3Custom = require('./web3_custom/methods')
+const config = require('./config.json');
 
 //https://data-seed-prebsc-1-s1.binance.org:8545/
 const BscNode = "https://data-seed-prebsc-1-s1.binance.org:8545"
 const web3BSC = new Web3(BscNode)
 
-const myWalletAddr = "" //testNet
-const myWalletPrivateKey = ""
-const privateKeyHex = new Buffer.from(myWalletPrivateKey, 'hex')
-web3BSC.eth.accounts.wallet.add(myWalletPrivateKey)
+const walletAddr = []
+walletAddr.push(config.walletAddr0)
+walletAddr.push(config.walletAddr1)
+
+const privWalletAddr = []
+privWalletAddr.push(config.privWalletAddr0)
+
+const privateKeyHex = new Buffer.from(privWalletAddr[0], 'hex')
+
+web3BSC.eth.accounts.wallet.add(privWalletAddr[0])
 var priceDolar = 1
 
 //Pancake
@@ -33,27 +39,19 @@ async function loopAPI(s, tokenAddr) {
     })
 }
 
-function fromWei(wei) {
-    return web3BSC.utils.fromWei(wei)
-}
-
-function toWei(amnt, unit = "ether") {
-    return web3BSC.utils.toWei(amnt, unit)
-}
-
-async function calculateAmount(tokenAddr, amnt) {
+async function calculateAmount(tokenAddr, amnt, symbol = "TOKEN") {
     let pancakeContract = new web3BSC.eth.Contract(pancakeRouterAbi, pancakeRouterAddr)
     let tokenAmnt = toWei(amnt);
     let result = await pancakeContract.methods.getAmountsOut(tokenAmnt, [tokenAddr, USDT]).call()
-    let price = fromWei(result[1])
-    console.log(`[DAI] Price: $ ${price*priceDolar}`)
+    let price = web3Custom.fromWei(result[1])
+    console.log(`[${symbol}] Price: $ ${price*priceDolar}`)
 }
 
 async function calculateSafeMoon() {
     let amntToSell = toWei("1")
     let pancakeContract = new web3BSC.eth.Contract(pancakeRouterAbi, pancakeRouterAddr)
     let price = await pancakeContract.methods.getAmountsOut(amntToSell, [SafeMoon, USDT]).call()
-    priceDolar = fromWei(price[1])
+    priceDolar = web3Custom.fromWei(price[1])
     console.log(`SafeMoon to Dol: $ ${priceDolar}`)
 }
 
@@ -65,33 +63,23 @@ const WBNB = "0xae13d989dac2f0debff460ac112a837c89baa7cd"
 
 const GWEI = "gwei"
 
-// startProgram
-
-web3BSC.eth.getBalance(myWalletAddr)
-    .then(e => console.log(`Balance of BNB: ${fromWei(e)}`))
-
-/* calculateSafeMoon().then( function () {
-    console.log("")
-    loopAPI(3, DAI)
-}); */
-
 async function single() {
     const tokenABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"account","type":"address"}],"name":"Paused","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"role","type":"bytes32"},{"indexed":true,"internalType":"bytes32","name":"previousAdminRole","type":"bytes32"},{"indexed":true,"internalType":"bytes32","name":"newAdminRole","type":"bytes32"}],"name":"RoleAdminChanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"role","type":"bytes32"},{"indexed":true,"internalType":"address","name":"account","type":"address"},{"indexed":true,"internalType":"address","name":"sender","type":"address"}],"name":"RoleGranted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"role","type":"bytes32"},{"indexed":true,"internalType":"address","name":"account","type":"address"},{"indexed":true,"internalType":"address","name":"sender","type":"address"}],"name":"RoleRevoked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"account","type":"address"}],"name":"Unpaused","type":"event"},{"inputs":[],"name":"DEFAULT_ADMIN_ROLE","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MINTER_ROLE","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"PAUSER_ROLE","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"burn","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"burnFrom","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"}],"name":"getRoleAdmin","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"uint256","name":"index","type":"uint256"}],"name":"getRoleMember","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"}],"name":"getRoleMemberCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"grantRole","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"hasRole","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"initializedCap","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"paused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"renounceRole","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"revokeRole","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes4","name":"interfaceId","type":"bytes4"}],"name":"supportsInterface","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"unpause","outputs":[],"stateMutability":"nonpayable","type":"function"}]
 
     let wbnbContract = new web3BSC.eth.Contract(tokenABI, WBNB)
-    await wbnbContract.methods.balanceOf(myWalletAddr).call()
-        .then(e => console.log(`[WBNB] Balance: ${fromWei(e)}`))
+    await wbnbContract.methods.balanceOf(walletAddr[0]).call()
+        .then(e => console.log(`[WBNB] Balance: ${web3Custom.fromWei(e)}`))
 
     let daiContract = new web3BSC.eth.Contract(tokenABI, DAI)
-    await daiContract.methods.balanceOf(myWalletAddr).call()
-        .then(e => console.log(`[DAI] Balance: ${fromWei(e)}`))
+    await daiContract.methods.balanceOf(walletAddr[0]).call()
+        .then(e => console.log(`[DAI] Balance: ${web3Custom.fromWei(e)}`))
 
     let usdtContract = new web3BSC.eth.Contract(tokenABI, USDT)
-    await usdtContract.methods.balanceOf(myWalletAddr).call()
-        .then(e => console.log(`[USDT] Balance: ${fromWei(e)}`))
+    await usdtContract.methods.balanceOf(walletAddr[0]).call()
+        .then(e => console.log(`[USDT] Balance: ${web3Custom.fromWei(e)}`))
 
     //daiContract.methods.totalSupply().call()
-    //    .then(e => console.log(`[DAI] Total Supply: ${fromWei(e)}`))
+    //    .then(e => console.log(`[DAI] Total Supply: ${web3Custom.fromWei(e)}`))
 
     let pancakeContract = new web3BSC.eth.Contract(pancakeRouterAbi, pancakeRouterAddr)
     let amntOutMin = "0.00004"
@@ -107,7 +95,7 @@ async function single() {
             USDT,
             DAI
         ],
-        myWalletAddr,
+        walletAddr[0],
         transactionTimeLimitHex
     )
     console.log(`data:`)
@@ -118,32 +106,17 @@ async function single() {
 
     console.log(`nonce: ${nonce}, nonce+1: ${nonce+1}, nonceHex: ${nonceHex}`)
 
-    //1 gwei = 1000000000 (10^9) //https://web3js.readthedocs.io/en/v1.2.11/web3-utils.html
-    //"value": web3BSC.utils.toHex(toWei("0.5", "ether")),
-    //"gas" or "gasLimit": web3BSC.utils.toHex("290000"),
     var rawTransaction = {
-        //"nonce": nonceHex,
-        "nonce": '0x5',
-        "from": myWalletAddr,
-        "gasPrice": web3BSC.utils.toHex(toWei("39", GWEI)),
+        "nonce": nonceHex,
+        "from": walletAddr[0],
+        "gasPrice": web3BSC.utils.toHex(toWei("30", GWEI)),
         "gasLimit": web3BSC.utils.toHex("290000"),
         "to": pancakeRouterAddr,
         "value": web3BSC.utils.toHex("0"),
         "data": data.encodeABI()
     }
     console.log(rawTransaction)
-
-    const testnetChain = common.default.forCustomChain(
-        'mainnet', {
-            name: 'Binance Smart Chain Testnet',
-            networkId: 97,
-            chainId: 97,
-            url: 'https://data-seed-prebsc-1-s1.binance.org/'
-        },
-        'istanbul'
-        //'petersburg' 
-    )
-    var tx = new Tx(rawTransaction, {common: testnetChain});
+    var tx = new Tx(rawTransaction, { common: web3Custom.getChainCommon("testnet") });
     tx.sign(privateKeyHex)
 
     //calculate upFrontCost
@@ -185,11 +158,7 @@ async function single() {
 
     //sentSignedTransaction(tx)
 
-    //calculateAmount(DAI, "1")
-}
-
-async function getTransactionCount() {
-    return await web3BSC.eth.getTransactionCount(myWalletAddr)
+    //calculateAmount(DAI, "1", "DAI")
 }
 
 async function sentSignedTransaction(transaction) {
@@ -198,4 +167,58 @@ async function sentSignedTransaction(transaction) {
     return txSent
 }
 
-single()
+async function main () {
+    let beforeBalance = new web3BSC.utils.BN(0)
+    await web3BSC.eth.getBalance(walletAddr[0])
+        .catch(e => console.log(e))
+        .then(e => {
+            beforeBalance = e
+            console.log(`Balance of BNB: ${web3Custom.fromWei(e)} in acc0`)
+        })
+
+    await web3BSC.eth.getBalance(walletAddr[1])
+        .catch(e => console.log(e))
+        .then(e => console.log(`Balance of BNB: ${web3Custom.fromWei(e)} in acc1`))
+
+    //Transfer
+    let valueToTransfer = "0.09"
+    let gasPriceGwei = "20"
+
+    let payload = {
+        fromAddr: walletAddr[0],
+        fromPrivAddr: privWalletAddr[0],
+        toAddr: walletAddr[1],
+        valueToTransfer: valueToTransfer,
+        gasPriceGwei: gasPriceGwei,
+        chainCommon: web3Custom.getChainCommon("testnet")
+    }
+
+    web3Custom.transfer(payload)
+        .then(res => {
+            if (res) {
+                process.stdout.write(`\n[SUCCESS] Transaction hash: `)
+                console.log(res.transactionHash)
+                console.log(res)
+            }
+
+            web3Custom.getBalance(walletAddr[0])
+                .then(currBalance => {
+                    let valueUsed = web3Custom.fromWei((beforeBalance-currBalance).toString())
+                    console.log(valueUsed)
+                    console.log(`\nTransfer + GasFee: ${valueUsed} BNB`)
+                    console.log(`GasFee: ${web3Custom.toUSD(valueUsed-valueToTransfer, "BNB", "ether").toFixed(2)} USD`)
+                    console.log("\n")
+                })
+        })
+}
+
+//start program
+
+/* calculateSafeMoon().then( function () {
+    console.log("")
+    loopAPI(3, DAI)
+}); */
+
+web3Custom.init(web3BSC)
+main()
+//single()

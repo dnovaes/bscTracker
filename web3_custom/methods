@@ -1,4 +1,5 @@
 const Tx = require('ethereumjs-tx').Transaction
+const common = require('ethereumjs-common');
 const GWEI = "Gwei"
 const ETHER = "ether"
 var web3Client = {}
@@ -22,20 +23,26 @@ module.exports = {
     getTransactionCount: async function (walletAddress) {
         return await web3Client.eth.getTransactionCount(walletAddress)
     },
-    transfer: async function(fromAddr, fromPrivAddr, toAddr, valueToTransfer, gasPriceGwei) {
-        let nonce = await this.getTransactionCount(fromAddr)
+    transfer: async function(payload) {
+        //payload: fromAddr, fromPrivAddr, toAddr, valueToTransfer, gasPriceGwei, chainCommon = null
+        let nonce = await this.getTransactionCount(payload.fromAddr)
         var rawTransaction = {
             "nonce": nonce,
-            "gasPrice": web3Client.utils.toHex(this.toWei(gasPriceGwei, GWEI)),
+            "gasPrice": web3Client.utils.toHex(this.toWei(payload.gasPriceGwei, GWEI)),
             "gasLimit": web3Client.utils.toHex("300000"), //gwei aswell
-            "from": fromAddr,
-            "to": toAddr,
-            "value": web3Client.utils.toHex(this.toWei(valueToTransfer)),
+            "from": payload.fromAddr,
+            "to": payload.toAddr,
+            "value": web3Client.utils.toHex(this.toWei(payload.valueToTransfer)),
         }
 
-        var privateKeyHexBuffer = Buffer.from(fromPrivAddr.replace( '0x' , '' ), 'hex')
+        var privateKeyHexBuffer = Buffer.from(payload.fromPrivAddr.replace( '0x' , '' ), 'hex')
 
-        let tx = new Tx(rawTransaction)
+        let tx = {}
+        if (payload.chainCommon == undefined || !payload.chainCommon) {
+            tx = new Tx(rawTransaction)
+        } else {
+            tx = new Tx(rawTransaction, {common: payload.chainCommon});
+        }
         tx.sign(privateKeyHexBuffer)
 
         var serializedTx = '0x' + tx.serialize().toString('hex')
@@ -43,7 +50,7 @@ module.exports = {
             .catch(error => { console.log(`sendSignedTransaction-> Error: ${error.message}`)})
         return txSent
     },
-    toUSD: function(gasPrice, networkToken = "ETH", unit = GWEI) {
+    toUSD: function(value, networkToken = "ETH", unit = GWEI) {
         //1 wei = 1*10^-18 ETH
         //1 ether = 1 ETH = 1*10^18 wei
         let ethUSD = 3709
@@ -51,11 +58,11 @@ module.exports = {
 
         let amnt = 0
         if (unit == GWEI) {
-            amnt = gasPrice*Math.pow(10, -9)
+            amnt = value*Math.pow(10, -9)
         } else if (unit == ETHER) {
-            amnt = gasPrice
+            amnt = value
         } else {
-            amnt = gasPrice*Math.pow(10, -18)
+            amnt = value*Math.pow(10, -18)
         }
 
         if (networkToken == "BNB") {
@@ -63,6 +70,29 @@ module.exports = {
         } else {
             return amnt*ethUSD
         }
+    },
+    getChainCommon: function(chain) {
+        if (chain == "bsc") {
+            return common.default.forCustomChain(
+                'mainnet', {
+                    name: 'Binance Smart Chain',
+                    networkId: 56,
+                    chainId: 56,
+                    url: 'https://bsc-dataseed.binance.org/'
+                },
+                'petersburg'
+            )
+        } else {
+            return common.default.forCustomChain(
+                'mainnet', {
+                    name: 'Binance Smart Chain Testnet',
+                    networkId: 97,
+                    chainId: 97,
+                    url: 'https://data-seed-prebsc-1-s1.binance.org/'
+                },
+                'istanbul'
+                //'petersburg'
+            )
+        }
     }
-
 }
